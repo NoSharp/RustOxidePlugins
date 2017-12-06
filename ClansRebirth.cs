@@ -113,6 +113,7 @@ namespace Oxide.Plugins
             public const string Join = "clansrebirthed.clan.join";
             public const string AllyChat = "clansrebirthed.clan.allychat";
             public const string ClanChat = "clansrebirthed.clan.clanchat";
+            public const string Kick = "clansrebirthed.clan.kick";
         }
 
         public void RegisterAllPerms()
@@ -166,10 +167,14 @@ namespace Oxide.Plugins
             public const string PlayerNotInClan = "PlayerNotInClan";
             public const string PlayerUnableToRankUp = "PlayerUnableToRankUp";
             public const string PlayerRankedUp = "PlayerRankedUp";
+            public const string PlayerNotInYourClan = "PlayerNotInYourClan";
+            public const string PlayerCantKickPlayer = "PlayerCantKickPlayer";
+            public const string KickedPlayerFromClan = "KickedPlayerFromClan";
         }
 
         private void RegisterLangMessages()
         {
+
             lang.RegisterMessages(new Dictionary<string, string>
             {
                 {"RecieveInviteFromFriend", "Recieved and invite from your friend: {0}"},
@@ -195,8 +200,12 @@ namespace Oxide.Plugins
                 {"PlayerAlreadyInClan","The player is already in a clan."},
                 {"PlayerNotInClan","The player is not in the clan."},
                 {"PlayerUnableToRankUp","You are not able to rankup."},
-                {"PlayerRankedUp","Ranked up {0}"}
+                {"PlayerRankedUp","Ranked up {0}"},
+                {"PlayerNotInYourClan"," This player is not in your clan :("},
+                {"PlayerCantKickPlayer", "You can't kick someone who is higher in rank than you!"},
+                {"KickedPlayerFromClan", "You Kicked {0} from the clan!"}
             }, this);
+            
         }
 
         public string GetMessage(string TargetMessage)
@@ -529,7 +538,7 @@ namespace Oxide.Plugins
                         return;
                     }
 
-                    if (args[0] == "invite")
+                    if (args[0].ToLower() == "invite")
                     {
                         if (!CheckIfPlayerHasPerm(player.UserIDString, Permission.Invite))
                         {
@@ -610,54 +619,120 @@ namespace Oxide.Plugins
                     {
                         if (!CheckIfPlayerInClan(player.userID))
                         {
-                            if (!CheckIfPlayerHasPerm(player.UserIDString, Permission.Promote))
-                            {
-                                player.SendMessage($"{GetMessage(LangMessages.NoPermissions)}");
-                                return;
-                            }
-
-                            if (!CheckIfPlayerInClan(player.userID))
-                            {
-                                LangMessageToPlayer(player, LangMessages.NotInClan);
-                                return;
-                            }
-
-                            var targetPlayer = FindPlayer(args[1]);
-                            var playerClan = GetClanOf(targetPlayer.userID);
-
-                            if (!PlayerInClan(targetPlayer.userID, playerClan))
-                            {
-                                LangMessageToPlayer(player, LangMessages.PlayerNotInClan);
-                                return;
-                            }
-
-                            var targetPlayerRank = playerClan.MemberList[targetPlayer.userID];
-                            playerClan.MemberList.Remove(targetPlayer.userID);
-
-                            switch (targetPlayerRank)
-                            {
-                                case (Rank.Normal):
-                                    playerClan.MemberList.Add(targetPlayer.userID, Rank.Moderator);
-                                    data.SaveData(data.ClanData, DataFile.ClanData);
-                                    player.SendMessage($"{string.Format(GetMessage("PlayerRankedUp"), player.displayName)}");
-                                    return;
-
-                                case (Rank.Moderator):
-                                    playerClan.MemberList.Add(targetPlayer.userID, Rank.Council);
-                                    data.SaveData(data.ClanData, DataFile.ClanData);
-                                    player.SendMessage($"{string.Format(GetMessage("PlayerRankedUp"), player.displayName)}");
-                                    return;
-                                case (Rank.Council):
-                                    LangMessageToPlayer(player, LangMessages.PlayerUnableToRankUp);
-                                    return;
-                                case (Rank.Owner):
-                                    LangMessageToPlayer(player, LangMessages.PlayerUnableToRankUp);
-                                    return;
-                                default:
-                                    return;
-                            }
+                            LangMessageToPlayer(player, LangMessages.NotInClan);
+                            return;
                         }
+                        if (!CheckIfPlayerHasPerm(player.UserIDString, Permission.Promote))
+                        {
+                            player.SendMessage($"{GetMessage(LangMessages.NoPermissions)}");
+                            return;
+                        }
+
+                        if (!CheckIfPlayerInClan(player.userID))
+                        {
+                            LangMessageToPlayer(player, LangMessages.NotInClan);
+                            return;
+                        }
+
+                        var targetPlayer = FindPlayer(args[1]);
+                        var playerClan = GetClanOf(targetPlayer.userID);
+
+                        if (!PlayerInClan(targetPlayer.userID, playerClan))
+                        {
+                            LangMessageToPlayer(player, LangMessages.PlayerNotInClan);
+                            return;
+                        }
+
+                        var targetPlayerRank = playerClan.MemberList[targetPlayer.userID];
+                        playerClan.MemberList.Remove(targetPlayer.userID);
+
+                        switch (targetPlayerRank)
+                        {
+                            case (Rank.Normal):
+                                playerClan.MemberList.Add(targetPlayer.userID, Rank.Moderator);
+                                data.SaveData(data.ClanData, DataFile.ClanData);
+                                player.SendMessage($"{string.Format(GetMessage("PlayerRankedUp"), player.displayName)}");
+                                return;
+
+                            case (Rank.Moderator):
+                                playerClan.MemberList.Add(targetPlayer.userID, Rank.Council);
+                                data.SaveData(data.ClanData, DataFile.ClanData);
+                                player.SendMessage($"{string.Format(GetMessage("PlayerRankedUp"), player.displayName)}");
+                                return;
+                            case (Rank.Council):
+                                LangMessageToPlayer(player, LangMessages.PlayerUnableToRankUp);
+                                return;
+                            case (Rank.Owner):
+                                LangMessageToPlayer(player, LangMessages.PlayerUnableToRankUp);
+                                return;
+                            default:
+                                return;
+                        }
+                        
                     }
+
+                    if (args[0].ToLower() == "kick")
+                    {
+                        if (!CheckIfPlayerHasPerm(player.UserIDString, Permission.Admin))
+                        {
+                            player.SendMessage($"{GetMessage(LangMessages.NoPermissions)}");
+                            return;
+                        }
+
+                        if (!CheckIfPlayerInClan(player.userID))
+                        {
+                            LangMessageToPlayer(player, LangMessages.NotInClan);
+                            return;
+                        }
+
+                        var targetPlayer = FindPlayer(args[1]);
+
+                        if (targetPlayer == null)
+                        {
+                            LangMessageToPlayer(player, LangMessages.NotAValidPlayer);
+                            return;
+                        }
+
+                        var playerClan = GetClanOf(player.userID);
+
+                        if (playerClan == null)
+                        {
+                            LangMessageToPlayer(player, LangMessages.NotInClan);
+                            return;
+                        }
+
+                        var targetPlayerClan = GetClanOf(targetPlayer.userID);
+
+                        if (targetPlayerClan == null)
+                        {
+                            LangMessageToPlayer(player, LangMessages.PlayerNotInClan);
+                            return;
+                        }
+
+                        if (targetPlayerClan != playerClan)
+                        {
+                            LangMessageToPlayer(player, LangMessages.PlayerNotInYourClan);
+                            return;
+                        }
+
+                        if (playerClan.MemberList[player.userID] <= Rank.Normal)
+                        {
+                            LangMessageToPlayer(player, LangMessages.NotHighEnoughClanRank);
+                            return;
+                        }
+
+                        if (playerClan.MemberList[targetPlayer.userID] > playerClan.MemberList[player.userID])
+                        {
+                            LangMessageToPlayer(player, LangMessages.PlayerCantKickPlayer);
+                        }
+
+                        playerClan.MemberList[targetPlayer.userID] = playerClan.MemberList[targetPlayer.userID] ++ ;
+                        data.SaveData(data.ClanData, DataFile.ClanData);
+
+                        player.SendMessage(string.Format($"{GetMessage("KickedPlayerFromClan")}", targetPlayer.displayName));
+                        return;
+                    }
+
                     break;
 
                 case 1:
