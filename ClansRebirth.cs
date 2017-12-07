@@ -25,13 +25,7 @@ namespace Oxide.Plugins
 
         #region Saving Data
 
-        #region Enums
-
         public enum Rank { Normal = 0, Moderator = 1, Council = 2, Owner = 3 };
-
-        #endregion Enums
-
-        #region Classes
 
         public struct DataFile
         {
@@ -91,15 +85,9 @@ namespace Oxide.Plugins
             }
         }
 
-        #endregion Classes
-
         #endregion Saving Data
 
         #region Helpers
-
-        #region ClansRebirthed
-
-        #region Permissions
 
         public struct Permission
         {
@@ -136,10 +124,6 @@ namespace Oxide.Plugins
             return false;
         }
 
-        #endregion Permissions
-
-        #region Lang
-
         public struct LangMessages
         {
             public const string SendInvite = "SendInvitesToFriends";
@@ -172,7 +156,7 @@ namespace Oxide.Plugins
             public const string KickedPlayerFromClan = "KickedPlayerFromClan";
         }
 
-        private void RegisterLangMessages()
+        public void RegisterLangMessages()
         {
 
             lang.RegisterMessages(new Dictionary<string, string>
@@ -213,10 +197,6 @@ namespace Oxide.Plugins
             return lang.GetMessage(TargetMessage, this);
         }
 
-        #endregion Lang
-
-        #region Config
-
         public class ConfigData
         {
             public List<ulong> PurgeAllowedPlayers { get; set; }
@@ -239,7 +219,54 @@ namespace Oxide.Plugins
             }
         }
 
-        #endregion Config
+        public void SaveToInviteList(ulong userId, Clan clan)
+        {
+            data.ClanInviteData.Add(userId, clan);
+        }
+
+        public void SaveToClanData(Clan clan)
+        {
+            data.ClanData.Add(clan);
+        }
+
+        public void SaveAllDataTimer()
+        {
+            var cfgData = Config.ReadObject<ConfigData>();
+            
+            ActiveTimers.Add(timer.Repeat(cfgData.SaveTime, 0, () =>
+            {
+                Puts("STARTING SAVE OF CLAN DATA...");
+                data.SaveData(data.ClanData, DataFile.ClanData);
+                data.SaveData(data.ClanInviteData, DataFile.ClanInviteData);
+                Puts("SAVED ALL CLAN DATA");
+            }));
+
+
+        }
+
+        public void DestroyAllTimers()
+        {
+            foreach (var e in ActiveTimers)
+            {
+                e.Destroy();
+            }
+        }
+
+        public BasePlayer FindPlayer(string nameOrId)
+        {
+            foreach (var activePlayer in BasePlayer.activePlayerList)
+            {
+                if (activePlayer.displayName == nameOrId) return activePlayer;
+                if (activePlayer.displayName.ToLower().Contains(nameOrId.ToLower())) return activePlayer;
+                if (activePlayer.UserIDString == nameOrId) return activePlayer;
+            }
+            return null;
+        }
+
+        public void LangMessageToPlayer(BasePlayer player, string message)
+        {
+            player.SendMessage($"{GetMessage(message)}");
+        }
 
         #region Clan Managment
 
@@ -275,7 +302,7 @@ namespace Oxide.Plugins
 
             data.ClanInviteData.Add(playerId, clan);
             playerFromId.SendMessage($"{string.Format(GetMessage("ClanInvitesPlayer"), clan.ClanName)}");
-            data.SaveData(data.ClanInviteData,DataFile.ClanInviteData);
+            data.SaveData(data.ClanInviteData, DataFile.ClanInviteData);
             return true;
         }
 
@@ -373,72 +400,9 @@ namespace Oxide.Plugins
 
         #endregion Clan Managment
 
-        #region Data Managment
-
-        public void SaveToInviteList(ulong userId, Clan clan)
-        {
-            data.ClanInviteData.Add(userId, clan);
-        }
-
-        public void SaveToClanData(Clan clan)
-        {
-            data.ClanData.Add(clan);
-        }
-
-        public void SaveAllDataTimer()
-        {
-            var cfgData = Config.ReadObject<ConfigData>();
-            
-            ActiveTimers.Add(timer.Repeat(cfgData.SaveTime, 0, () =>
-            {
-                Puts("STARTING SAVE OF CLAN DATA...");
-                data.SaveData(data.ClanData, DataFile.ClanData);
-                data.SaveData(data.ClanInviteData, DataFile.ClanInviteData);
-                Puts("SAVED ALL CLAN DATA");
-            }));
-
-
-        }
-
-        public void DestroyAllTimers()
-        {
-            foreach (var e in ActiveTimers)
-            {
-                e.Destroy();
-            }
-        }
-
-        #endregion DataManagment
-
-        #region General Helpers
-
-        public BasePlayer FindPlayer(string nameOrId)
-        {
-            foreach (var activePlayer in BasePlayer.activePlayerList)
-            {
-                if (activePlayer.displayName == nameOrId) return activePlayer;
-                if (activePlayer.displayName.ToLower().Contains(nameOrId.ToLower())) return activePlayer;
-                if (activePlayer.UserIDString == nameOrId) return activePlayer;
-            }
-            return null;
-        }
-
-        public void LangMessageToPlayer(BasePlayer player, string message)
-        {
-            player.SendMessage($"{GetMessage(message)}");
-        }
-
-        #endregion General Helpers
-
-        #endregion ClansRebirthed
-
         #endregion Helpers
 
         #region Hooks
-
-        #region Other Plugin Hooks
-
-        #region BetterChatAPI
 
         private void OnBetterChat(Dictionary<string, object> data)
         {
@@ -448,12 +412,6 @@ namespace Oxide.Plugins
 
             betterChatTitles.Add(findClanOfPlayer);
         }
-
-        #endregion BetterChatAPI
-
-        #endregion Other Plugin Hooks
-
-        #region Oxide Hooks
 
         private void Loaded()
         {  
@@ -472,9 +430,9 @@ namespace Oxide.Plugins
             PrintWarning("Creating a new configuration file");
             ConfigData cfgData = new ConfigData();
             Config.WriteObject(cfgData);
+            Config.Save();
+            Config.Load();
         }
-
-        #endregion Oxide Hooks
 
         #endregion Hooks
 
