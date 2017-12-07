@@ -364,7 +364,6 @@ namespace Oxide.Plugins
                 {
                     return e;
                 }
-                continue;
             }
             return null;
         }
