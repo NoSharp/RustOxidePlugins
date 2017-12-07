@@ -154,6 +154,7 @@ namespace Oxide.Plugins
             public const string PlayerNotInYourClan = "PlayerNotInYourClan";
             public const string PlayerCantKickPlayer = "PlayerCantKickPlayer";
             public const string KickedPlayerFromClan = "KickedPlayerFromClan";
+            public const string NoAllies = "NoAllies";
         }
 
         public void RegisterLangMessages()
@@ -187,7 +188,8 @@ namespace Oxide.Plugins
                 {"PlayerRankedUp","Ranked up {0}"},
                 {"PlayerNotInYourClan"," This player is not in your clan :("},
                 {"PlayerCantKickPlayer", "You can't kick someone who is higher in rank than you!"},
-                {"KickedPlayerFromClan", "You Kicked {0} from the clan!"}
+                {"KickedPlayerFromClan", "You Kicked {0} from the clan!"},
+                {"NoAllies", "Your clan has no allies."}
             }, this);
             
         }
@@ -396,6 +398,15 @@ namespace Oxide.Plugins
                 ClanBroadcast(allyClan, message);
             }
 
+        }
+
+        private bool DoesClanHaveAllies(Clan targetClan)
+        {
+            if (targetClan.AllianceList.Count == 0)
+            {
+                return false;
+            }
+            return true;
         }
 
         #endregion Clan Managment
@@ -690,7 +701,6 @@ namespace Oxide.Plugins
                         player.SendMessage(string.Format($"{GetMessage("KickedPlayerFromClan")}", targetPlayer.displayName));
                         return;
                     }
-
                     break;
 
                 case 1:
@@ -730,6 +740,56 @@ namespace Oxide.Plugins
             }
 
         }
+
+        [ChatCommand("c")]
+        private void ClanChatCommand(BasePlayer player, string command, string[] args)
+        {
+            if (!CheckIfPlayerHasPerm(player.UserIDString, Permission.ClanChat))
+            {
+                LangMessageToPlayer(player, LangMessages.NoPermissions);
+                return;
+
+            }
+
+            if (!CheckIfPlayerInClan(player.userID))
+            {
+                LangMessageToPlayer(player, LangMessages.NotInClan);
+                return;
+            }
+
+            var targetClan = GetClanOf(player.userID);
+            ClanBroadcast(targetClan, args.ToString());
+            Puts(args.ToString());
+        }
+
+        [ChatCommand("a")]
+        private void AllianceChatCommand(BasePlayer player, string command, string[] args)
+        {
+            if (!CheckIfPlayerHasPerm(player.UserIDString, Permission.ClanChat))
+            {
+                LangMessageToPlayer(player, LangMessages.NoPermissions);
+                return;
+
+            }
+
+            if (!CheckIfPlayerInClan(player.userID))
+            {
+                LangMessageToPlayer(player, LangMessages.NotInClan);
+                return;
+            }
+
+            var targetClan = GetClanOf(player.userID);
+
+            if (!DoesClanHaveAllies(targetClan))
+            {
+                LangMessageToPlayer(player, LangMessages.NoAllies);
+                return;
+            }
+
+            AllyBroadcast(targetClan, args.ToString());
+            
+        }
+
         #endregion Command
     }
 }
