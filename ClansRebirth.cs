@@ -27,7 +27,12 @@ namespace Oxide.Plugins
         #region Saving Data
 
         public enum Rank
-        { Normal = 0, Moderator = 1, Council = 2, Owner = 3 };
+        { 
+        Normal = 0,
+        Moderator = 1,
+        Council = 2,
+        Owner = 3 
+        };
 
         public struct DataFile
         {
