@@ -9,9 +9,9 @@ using UnityEngine;
 namespace Oxide.Plugins
 {
 
-    [Info("Clans Rebirthed", "Serenity 3", "1.0", ResourceId = 0)]
-    [Description("Serenity's Clans Rebirthed")]
-    internal class ClansRebirthed : RustPlugin
+    [Info("Clans Rebirth", "Serenity 3", "1.0", ResourceId = 0)]
+    [Description("Serenity's Clans Rebirth")]
+    internal class ClansRebirth : RustPlugin
     {
         #region Fields
 
@@ -91,17 +91,17 @@ namespace Oxide.Plugins
 
         public struct Permission
         {
-            public const string Admin = "clansrebirthed.admin";
-            public const string Create = "clansrebirthed.clan.create";
-            public const string Invite = "clansrebirthed.clan.invite";
-            public const string Leave = "clansrebirthed.clan.leave";
-            public const string SetHome = "clansrebirthed.clan.sethome";
-            public const string Promote = "clansrebirthed.clan.promote";
-            public const string Home = "clansrebirthed.clan.home";
-            public const string Join = "clansrebirthed.clan.join";
-            public const string AllyChat = "clansrebirthed.clan.allychat";
-            public const string ClanChat = "clansrebirthed.clan.clanchat";
-            public const string Kick = "clansrebirthed.clan.kick";
+            public const string Admin = "clansrebirth.admin";
+            public const string Create = "clansrebirth.clan.create";
+            public const string Invite = "clansrebirth.clan.invite";
+            public const string Leave = "clansrebirth.clan.leave";
+            public const string SetHome = "clansrebirth.clan.sethome";
+            public const string Promote = "clansrebirth.clan.promote";
+            public const string Home = "clansrebirth.clan.home";
+            public const string Join = "clansrebirth.clan.join";
+            public const string AllyChat = "clansrebirth.clan.allychat";
+            public const string ClanChat = "clansrebirth.clan.clanchat";
+            public const string Kick = "clansrebirth.clan.kick";
         }
 
         public void RegisterAllPerms()
@@ -768,7 +768,6 @@ namespace Oxide.Plugins
             {
                 LangMessageToPlayer(player, LangMessages.NoPermissions);
                 return;
-
             }
 
             if (!CheckIfPlayerInClan(player.userID))
