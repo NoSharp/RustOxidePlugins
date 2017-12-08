@@ -19,13 +19,15 @@ namespace Oxide.Plugins
 
         public HashSet<Timer> ActiveTimers = new HashSet<Timer>();
 
-        [PluginReference] public Plugin BetterChat, Friends, FriendlyFire;
+        [PluginReference]
+        public Plugin BetterChat, Friends, FriendlyFire;
 
         #endregion Fields
 
         #region Saving Data
 
-        public enum Rank { Normal = 0, Moderator = 1, Council = 2, Owner = 3 };
+        public enum Rank
+        { Normal = 0, Moderator = 1, Council = 2, Owner = 3 };
 
         public struct DataFile
         {
@@ -44,7 +46,7 @@ namespace Oxide.Plugins
                 ReadData(ref ClanInviteData, DataFile.ClanInviteData);
             }
 
-            public void ReadData<T>(ref T data, string filename ) => data = Interface.Oxide.DataFileSystem.ReadObject<T>($"ClansRebirthed/{filename}");
+            public void ReadData<T>(ref T data, string filename) => data = Interface.Oxide.DataFileSystem.ReadObject<T>($"ClansRebirthed/{filename}");
 
             public void SaveData<T>(T data, string filename) => Interface.Oxide.DataFileSystem.WriteObject($"ClansRebirthed/{filename}", ClanData);
         }
@@ -106,10 +108,24 @@ namespace Oxide.Plugins
 
         public void RegisterAllPerms()
         {
-            foreach (var info in typeof(Permission).GetFields().Where(x => x.IsLiteral))
+            List<string> Perm = new List<string>
             {
-                var perm = info.GetValue(info) as string;
-                permission.RegisterPermission(perm, this);
+                Permission.Admin,
+                Permission.Create,
+                Permission.Invite,
+                Permission.Leave,
+                Permission.SetHome,
+                Permission.Promote,
+                Permission.Home,
+                Permission.Join,
+                Permission.AllyChat,
+                Permission.ClanChat,
+                Permission.Kick,
+            };
+
+            foreach (var e in Perm)
+            {
+                permission.RegisterPermission(e,this);
             }
         }
 
@@ -201,13 +217,11 @@ namespace Oxide.Plugins
 
         public class ConfigData
         {
-            public List<ulong> PurgeAllowedPlayers { get; set; }
-            public int SaveTime { get; set; }
-            public bool AnnounceCreation { get; set; }
-            public bool AnnounceDeletion { get; set; }
-            public bool UseFriends { get; set; }
-            public bool SendRequestToFriends { get; set; }
-            public bool Enabled { get; set; }
+            public List<ulong> PurgeAllowedPlayers = new List<ulong>();
+            public int SaveTime = 120;
+            public bool AnnounceCreation = true;
+            public bool AnnounceDeletion = true;
+            public bool Enabled = true;
 
             public ConfigData()
             {
@@ -215,8 +229,6 @@ namespace Oxide.Plugins
                 SaveTime = 120;
                 AnnounceCreation = true;
                 AnnounceDeletion = true;
-                UseFriends = true;
-                SendRequestToFriends = true;
                 Enabled = true;
             }
         }
