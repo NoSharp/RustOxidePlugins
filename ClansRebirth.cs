@@ -27,28 +27,39 @@ namespace Oxide.Plugins
         #region Saving Data
 
         public enum Rank
+<<<<<<< refs/remotes/origin/master
         { 
         Normal = 0,
         Moderator = 1,
         Council = 2,
         Owner = 3 
+=======
+        {
+            Normal = 0,
+            Moderator = 1,
+            Council = 2,
+            Owner = 3
+>>>>>>> Added a few commands and Name handler
         };
 
         public struct DataFile
         {
             public const string ClanInviteData = "ClanInviteData";
             public const string ClanData = "ClanData";
+            public const string PlayerData = "PlayerData";
         }
 
         public class StoreData
         {
             public HashSet<Clan> ClanData = new HashSet<Clan>();
             public Dictionary<ulong, Clan> ClanInviteData = new Dictionary<ulong, Clan>();
+            public HashSet<PlayerData> PlayerData = new HashSet<PlayerData>();
 
             public StoreData()
             {
                 ReadData(ref ClanData, DataFile.ClanData);
                 ReadData(ref ClanInviteData, DataFile.ClanInviteData);
+                ReadData(ref PlayerData, DataFile.PlayerData);
             }
 
             public void ReadData<T>(ref T data, string filename) => data = Interface.Oxide.DataFileSystem.ReadObject<T>($"ClansRebirthed/{filename}");
@@ -60,6 +71,7 @@ namespace Oxide.Plugins
         {
             public string ClanName;
             public string Description;
+            public string ClanTag;
             public int Id;
             public Vector3 ClanHome;
             public Dictionary<ulong, Rank> MemberList;
@@ -84,12 +96,28 @@ namespace Oxide.Plugins
 
                 ClanName = name;
                 Id = currentId + 1;
+                ClanTag = $"[{name}]";
                 MemberList = memberList;
                 AllianceList = allianceList;
                 EnemyList = enemyList;
                 Description = desc;
                 ClanHome = new Vector3();
             }
+        }
+
+        public class PlayerData
+        {
+            public string Name = "";
+            public string Clantag = "";
+            public Clan BelongsToClan = null;
+
+            public PlayerData(BasePlayer ply, Clan clan)
+            {
+                Name = ply.displayName;
+                Clantag = clan.ClanTag;
+                BelongsToClan = clan;
+            }
+
         }
 
         #endregion Saving Data
@@ -109,6 +137,7 @@ namespace Oxide.Plugins
             public const string AllyChat = "clansrebirth.clan.allychat";
             public const string ClanChat = "clansrebirth.clan.clanchat";
             public const string Kick = "clansrebirth.clan.kick";
+            public const string Disband = "clansrebirth.clan.disband";
         }
 
         public void RegisterAllPerms()
@@ -126,6 +155,7 @@ namespace Oxide.Plugins
                 Permission.AllyChat,
                 Permission.ClanChat,
                 Permission.Kick,
+                Permission.Disband
             };
 
             foreach (var e in Perm)
@@ -176,6 +206,8 @@ namespace Oxide.Plugins
             public const string PlayerCantKickPlayer = "PlayerCantKickPlayer";
             public const string KickedPlayerFromClan = "KickedPlayerFromClan";
             public const string NoAllies = "NoAllies";
+            public const string CantLeave = "CantLeave";
+            public const string CompletedLeave = "CompletedLeave";
         }
 
         public void RegisterLangMessages()
@@ -210,7 +242,9 @@ namespace Oxide.Plugins
                 {"PlayerNotInYourClan"," This player is not in your clan :("},
                 {"PlayerCantKickPlayer", "You can't kick someone who is higher in rank than you!"},
                 {"KickedPlayerFromClan", "You Kicked {0} from the clan!"},
-                {"NoAllies", "Your clan has no allies."}
+                {"NoAllies", "Your clan has no allies."},
+                {"CantLeave", "You are unable to leave the clan as you are the owner you must do /clan disband forever to leave your clan and disband it."},
+                {"CompletedLeave", "You have left your clan."}
             }, this);
             
         }
@@ -431,13 +465,17 @@ namespace Oxide.Plugins
 
         #region Hooks
 
-        private void OnBetterChat(Dictionary<string, object> data)
+        void OnPlayerInit(BasePlayer player)
         {
-            var betterChatTitles = data["Titles"] as List<string>;
-            var betterChatPlayer = data["Player"] as IPlayer;
-            var findClanOfPlayer = FindClanTagOf(ulong.Parse(betterChatPlayer.Id));
+            var targetClan = GetClanOf(player.userID);
+            var playerData = new PlayerData(player, targetClan);
+            if (data.PlayerData.Contains(playerData))
+            {
+                return;
+            }
 
-            betterChatTitles.Add(findClanOfPlayer);
+            data.PlayerData.Add(playerData);
+            data.SaveData(data.PlayerData, DataFile.PlayerData);
         }
 
         private void Loaded()
@@ -473,7 +511,7 @@ namespace Oxide.Plugins
             switch (args.Length)
             {
                 case 3:
-                    if (args[0] == "create")
+                    if (args[0].ToLower() == "create")
                     {
                         var name = args[1];
                         var desc = args[2];
@@ -502,6 +540,35 @@ namespace Oxide.Plugins
                         player.ChatMessage($"{string.Format(GetMessage("CreateClan"), clanClass.ClanName, clanClass.Description)}");
                         return;
                     }
+
+                    if (args[0].ToLower() == "disband")
+                    {
+                        if (args[1].ToLower() == "forever")
+                        {
+
+                            if (!CheckIfPlayerHasPerm(player.UserIDString, Permission.Disband))
+                            {
+                                LangMessageToPlayer(player, LangMessages.NoPermissions);
+                                return;
+                            }
+
+                            if (!CheckIfPlayerInClan(player.userID))
+                            {
+                                LangMessageToPlayer(player, LangMessages.NotInClan);
+                                return;
+                            }
+
+                            var targetClan = GetClanOf(player.userID);
+
+                            data.ClanData.Remove(targetClan);
+                            data.SaveData(data.ClanData, DataFile.ClanData);
+
+                            LangMessageToPlayer(player, LangMessages.DeleteClan);
+
+                        }
+
+                    }
+
                     break;
 
                 case 2:
@@ -596,7 +663,7 @@ namespace Oxide.Plugins
                         player.SendMessage($"{string.Format(GetMessage("ClanJoinPlayer"), targetClan.ClanName)}");
 
                         ClanBroadcast(targetClan, $"{string.Format(GetMessage("PlayerJoinClan"), player.displayName)}");
-                        
+
                         return;
                     }
 
@@ -653,7 +720,7 @@ namespace Oxide.Plugins
                             default:
                                 return;
                         }
-                        
+
                     }
 
                     if (args[0].ToLower() == "kick")
@@ -711,7 +778,7 @@ namespace Oxide.Plugins
                             LangMessageToPlayer(player, LangMessages.PlayerCantKickPlayer);
                         }
 
-                        playerClan.MemberList[targetPlayer.userID] = playerClan.MemberList[targetPlayer.userID] ++ ;
+                        playerClan.MemberList[targetPlayer.userID] = playerClan.MemberList[targetPlayer.userID]++;
                         data.SaveData(data.ClanData, DataFile.ClanData);
 
                         player.SendMessage(string.Format($"{GetMessage("KickedPlayerFromClan")}", targetPlayer.displayName));
@@ -748,6 +815,36 @@ namespace Oxide.Plugins
                         data.SaveData(data.ClanData, DataFile.ClanData);
                         data.SaveData(data.ClanData, DataFile.ClanData);
                     }
+
+                    if (args[0].ToLower() == "leave")
+                    {
+                        if (!permission.UserHasPermission(player.UserIDString, Permission.Leave))
+                        {
+                            LangMessageToPlayer(player, LangMessages.NoPermissions);
+                            return;
+                        }
+
+                        if (!CheckIfPlayerInClan(player.userID))
+                        {
+                            LangMessageToPlayer(player, LangMessages.NotInClan);
+                            return;
+                        }
+
+                        var targetClan = GetClanOf(player.userID);
+                        var targetClanMemberList = targetClan.MemberList;
+                        
+                        if (targetClanMemberList[player.userID] > Rank.Owner)
+                        {
+                            LangMessageToPlayer(player, LangMessages.CantLeave);
+                            return;
+                        }
+
+                        targetClanMemberList.Remove(player.userID);
+                        data.SaveData(data.ClanData, DataFile.ClanData);
+                        LangMessageToPlayer(player, LangMessages.CompletedLeave);
+                        return;
+                    }
+                    
                     break;
 
                 default:
