@@ -18,10 +18,11 @@ namespace Oxide.Plugins
         public static StoreData data = new StoreData();
 
         public HashSet<Timer> ActiveTimers = new HashSet<Timer>();
+        public Dictionary<BasePlayer,StorageContainer> PlayerContainers = new Dictionary<BasePlayer, StorageContainer>();
 
         [PluginReference]
         public Plugin BetterChat, Friends, FriendlyFire;
-
+        public const string box = "assets/prefabs/deployable/woodenbox/woodbox_deployed.prefab";
         #endregion Fields
 
         #region Saving Data
@@ -54,9 +55,9 @@ namespace Oxide.Plugins
                 ReadData(ref PlayerData, DataFile.PlayerData);
             }
 
-            public void ReadData<T>(ref T data, string filename) => data = Interface.Oxide.DataFileSystem.ReadObject<T>($"ClansRebirthed/{filename}");
+            public void ReadData<T>(ref T data, string filename) => data = data = Core.ProtoStorage.Load<T>($"ClansRebirthed/{filename}");
 
-            public void SaveData<T>(T data, string filename) => Interface.Oxide.DataFileSystem.WriteObject($"ClansRebirthed/{filename}", ClanData);
+            public void SaveData<T>(T data, string filename) => Core.ProtoStorage.Save<T>(data, $"ClansRebirthed/{filename}");
         }
 
         public class Clan
@@ -118,6 +119,18 @@ namespace Oxide.Plugins
 
         }
 
+        public class InventoryData
+        {
+            public StorageContainer storageContainer;
+            public Clan clan;
+
+            public InventoryData(Clan clanData, StorageContainer storage)
+            {
+                storageContainer = storage;
+                clan = clanData;
+            }
+        }
+
         #endregion Saving Data
 
         #region Helpers
@@ -136,6 +149,7 @@ namespace Oxide.Plugins
             public const string ClanChat = "clansrebirth.clan.clanchat";
             public const string Kick = "clansrebirth.clan.kick";
             public const string Disband = "clansrebirth.clan.disband";
+            public const string Vault = "clansrebirth.clan.vault";
         }
 
         public void RegisterAllPerms()
@@ -153,7 +167,8 @@ namespace Oxide.Plugins
                 Permission.AllyChat,
                 Permission.ClanChat,
                 Permission.Kick,
-                Permission.Disband
+                Permission.Disband,
+                Permission.Vault
             };
 
             foreach (var e in Perm)
@@ -331,6 +346,7 @@ namespace Oxide.Plugins
         {
             player.SendMessage($"{GetMessage(message)}");
         }
+
 
         #region Clan Managment
 
@@ -633,6 +649,10 @@ namespace Oxide.Plugins
 
                     }
 
+                    if (args[0].ToLower() == "invite")
+                    {
+
+                    }
                     break;
 
                 case 2:
@@ -960,9 +980,11 @@ namespace Oxide.Plugins
                             LangMessageToPlayer(player, LangMessages.NoHome);
                             return;
                         }
-
                         
+
                     }
+
+                    
                     break;
 
                 default:
