@@ -22,7 +22,6 @@ namespace Oxide.Plugins
 
         [PluginReference]
         public Plugin BetterChat, Friends, FriendlyFire;
-        public const string box = "assets/prefabs/deployable/woodenbox/woodbox_deployed.prefab";
         #endregion Fields
 
         #region Saving Data
